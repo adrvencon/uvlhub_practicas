@@ -57,21 +57,21 @@ jobs:
         run: |
           pytest app/modules/ --cov=app/modules/auth --cov=app/modules/featuremodel --cov=app/modules/flamapy --cov=app/modules/hubfile --cov=app/modules/notepad --cov=app/modules/profile --cov=app/modules/webhook --cov-report=xml:coverage.xml --cov-report=term --ignore-glob='*selenium*'
 
-      - name: Get Detailed Coverage and Comment on PR
-        id: detailed_coverage
+      - name: Get Detailed Coverage Report
+        id: coverage_report
         run: |
           coverage_details=$(python -c 'import xml.etree.ElementTree as ET
-          tree = ET.parse("coverage.xml")
-          root = tree.getroot()
-          coverage_report = "## Test Coverage Report\n"
-          for file in root.iter("file"):
-              filename = file.get("name")
-              line_rate = file.get("lines-covered")
-              total_lines = file.get("lines-valid")
-              if total_lines:
-                  line_percentage = float(line_rate) / float(total_lines) * 100
-                  coverage_report += f"{filename}: {line_percentage:.2f}%\n"
-          print(coverage_report)
+            tree = ET.parse("coverage.xml")
+            root = tree.getroot()
+            coverage_report = "## Test Coverage Report\n"
+            for file in root.iter("file"):
+                filename = file.get("name")
+                line_rate = file.get("lines-covered")
+                total_lines = file.get("lines-valid")
+                if total_lines:
+                    line_percentage = float(line_rate) / float(total_lines) * 100
+                    coverage_report += f"{filename}: {line_percentage:.2f}%\n"
+            print(coverage_report)
           ')
           echo "coverage_report=$coverage_details" >> $GITHUB_ENV
 

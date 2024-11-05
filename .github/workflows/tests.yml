@@ -1,6 +1,10 @@
-name: Run Tests and Post Coverage
+name: Run Tests with Coverage
 
 on:
+  push:
+    branches: 
+      - main
+      - develop
   pull_request:
     branches:
       - main
@@ -10,7 +14,7 @@ on:
       - reopened
 
 jobs:
-  test:
+  pytest:
     runs-on: ubuntu-latest
 
     services:
@@ -40,10 +44,18 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install pytest pytest-cov
 
-      - name: Run Tests with Coverage and Generate XML Report
+      - name: Run Tests with Coverage
+        env:
+          FLASK_ENV: testing
+          MARIADB_HOSTNAME: 127.0.0.1
+          MARIADB_PORT: 3306
+          MARIADB_TEST_DATABASE: uvlhubdb_test
+          MARIADB_USER: uvlhub_user
+          MARIADB_PASSWORD: uvlhub_password
         run: |
-          pytest --cov=app/modules/ --cov-report=xml:coverage.xml --ignore-glob='*selenium*'
+          pytest app/modules/ --cov=app/modules/ --cov-report=xml:coverage.xml --ignore-glob='*selenium*'
 
       - name: Parse Coverage Report and Comment on PR
         uses: peter-evans/create-or-update-comment@v2
@@ -59,8 +71,6 @@ jobs:
             root = tree.getroot()
             for elem in root.iter("coverage"):
                 line_rate = elem.get("line-rate")
-                branch_rate = elem.get("branch-rate")
                 print(f"Line Coverage: {float(line_rate) * 100:.2f}%")
-                print(f"Branch Coverage: {float(branch_rate) * 100:.2f}%")
             ')
             ```

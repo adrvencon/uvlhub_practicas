@@ -71,7 +71,7 @@ jobs:
               if total_lines:
                   line_percentage = float(line_rate) / float(total_lines) * 100
                   coverage_report += f"{filename}: {line_percentage:.2f}%\n"
-            print(coverage_report)
+          print(coverage_report)
           ')
           echo "::set-output name=coverage_report::$coverage_details"
 

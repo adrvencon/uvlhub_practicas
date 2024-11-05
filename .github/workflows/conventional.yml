@@ -18,14 +18,21 @@ jobs:
       
       - uses: webiny/action-conventional-commits@v1.0.3
 
-      # Badge for success
       - name: Set Badge for Commit Status (Success)
         if: success()
         run: |
-          echo "Commit Status: ![Commit Message Valid](https://img.shields.io/badge/Commit%20Message-Valid-brightgreen)"
+          echo "Commit Status: ![Commit Message Valid](https://img.shields.io/badge/Commit%20Message-Valid-brightgreen)" > badge.txt
       
-      # Badge for failure
       - name: Set Badge for Commit Status (Failure)
         if: failure()
         run: |
-          echo "Commit Status: ![Commit Message Invalid](https://img.shields.io/badge/Commit%20Message-Needs%20Fixing-red)"
+          echo "Commit Status: ![Commit Message Needs Fixing](https://img.shields.io/badge/Commit%20Message-Needs%20Fixing-red)" > badge.txt
+
+      - name: Post Badge in PR comment
+        if: always()
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            Commit Status:
+            ![Badge](file://badge.txt)

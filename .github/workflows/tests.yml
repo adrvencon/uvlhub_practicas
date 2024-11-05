@@ -57,20 +57,24 @@ jobs:
         run: |
           pytest app/modules/ --cov=app/modules/ --cov-report=xml:coverage.xml --ignore-glob='*selenium*'
 
-      - name: Parse Coverage Report and Comment on PR
+      - name: Get Coverage Percentage
+        id: coverage
+        run: |
+          coverage=$(python -c '
+            import xml.etree.ElementTree as ET
+            tree = ET.parse("coverage.xml")
+            root = tree.getroot()
+            for elem in root.iter("coverage"):
+                line_rate = elem.get("line-rate")
+                print(f"{float(line_rate) * 100:.2f}")
+          ')
+          echo "coverage=$coverage" >> $GITHUB_ENV
+
+      - name: Parse Coverage and Comment on PR
         uses: peter-evans/create-or-update-comment@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           issue-number: ${{ github.event.pull_request.number }}
           body: |
             ## Test Coverage Report
-            ```text
-            $(python -c '
-            import xml.etree.ElementTree as ET
-            tree = ET.parse("coverage.xml")
-            root = tree.getroot()
-            for elem in root.iter("coverage"):
-                line_rate = elem.get("line-rate")
-                print(f"Line Coverage: {float(line_rate) * 100:.2f}%")
-            ')
-            ```
+            Line Coverage: ${{ env.coverage }}%

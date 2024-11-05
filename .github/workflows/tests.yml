@@ -60,8 +60,8 @@ jobs:
       - name: Parse Coverage Report and Comment on PR
         uses: peter-evans/create-or-update-comment@v2
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          issue_number: ${{ github.event.pull_request.number }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.pull_request.number }}
           body: |
             ## Test Coverage Report
             ```text

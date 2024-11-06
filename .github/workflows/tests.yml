@@ -63,60 +63,49 @@ jobs:
           coverage=$(python -c 'import xml.etree.ElementTree as ET
           tree = ET.parse("coverage.xml")
           root = tree.getroot()
-          packages = []
           coverage = []
           for package in root.findall(".//package"):
               package_name = package.get("name")
-              packages.append(package_name)
+              coverage.append(f"**{package_name}**")
               for class_elem in package.findall(".//class"):
                   class_name = class_elem.get("name")
                   line_rate = class_elem.get("line-rate")
                   if line_rate:
-                      coverage.append(f"{package_name}__{class_name}_{line_rate}")
-          print("\n".join(packages))
-          print("\n".join(coverage))')
-
-          # Split the output into package names and coverage data
-          IFS=$'\n' read -d '' -r -a packages <<< "$(echo "$coverage" | head -n $(echo "$coverage" | wc -l))"
-          IFS=$'\n' read -d '' -r -a coverage <<< "$(echo "$coverage" | tail -n $(echo "$coverage" | wc -l))"
-
-          # Save package names and coverage data into environment variables
-          echo "package_names=${packages[*]}" >> $GITHUB_ENV
-          echo "coverage_data=${coverage[*]}" >> $GITHUB_ENV
+                      coverage.append(f"{class_name}_{line_rate}")
+          print(",".join(coverage))
+          ')
+          echo "coverage=$coverage" >> $GITHUB_ENV
 
       - name: Parse Coverage and Format for Comment
         id: parse-coverage
         run: |
+          # Split the coverage string into an array based on commas
+          IFS=',' read -r -a coverage_array <<< "${{ env.coverage }}"
+
           # Initialize an empty string to hold the formatted coverage output
           formatted_coverage=""
 
-          # Read package names and coverage data from environment variables
-          IFS=' ' read -r -a packages <<< "${{ env.package_names }}"
-          IFS=' ' read -r -a coverage_data <<< "${{ env.coverage_data }}"
-
-          # Loop through each package and its corresponding coverage
-          for i in "${!packages[@]}"; do
-            package_name="${packages[$i]}"
-            coverage_string="${coverage_data[$i]}"
-            
-            # Initialize a formatted block for the package
-            formatted_coverage+="**$package_name**:\n"
-            
-            # Split the coverage string into class name and coverage rate
-            IFS='_' read -r class_name coverage <<< "$coverage_string"
-
-            # Convert the coverage to a percentage (multiply by 100)
-            percentage_coverage=$(echo "scale=2; $coverage * 100" | bc)
-
-            # Append the class coverage to the formatted output
-            formatted_coverage+="  - **$class_name**: $percentage_coverage%\n"
+          # Loop through each file-coverage pair
+          for coverage_pair in "${coverage_array[@]}"; do
+            # Ensure we're not processing empty or malformed items
+            if [[ -n "$coverage_pair" && "$coverage_pair" =~ ^[a-zA-Z0-9_.-]+_[0-9.]+$ ]]; then
+              # Split the coverage_pair into file name and coverage value
+              IFS='_' read -r file coverage <<< "$coverage_pair"
+              
+              # Convert the coverage to a percentage (multiply by 100)
+              if [[ -n "$file" && -n "$coverage" && "$coverage" =~ ^[0-9.]+$ ]]; then
+                percentage_coverage=$(echo "scale=2; $coverage * 100" | bc)
+                
+                # Append the formatted coverage for this file to the result string
+                formatted_coverage+="**$file**: $percentage_coverage%\n"
+              fi
+            fi
           done
 
           # Output the full formatted coverage string to be used in the comment step
           echo "formatted_coverage<<EOF" >> $GITHUB_ENV
           echo -e "$formatted_coverage" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-
 
       - name: Comment on PR with Coverage Report
         uses: peter-evans/create-or-update-comment@v2

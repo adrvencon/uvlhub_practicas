@@ -60,34 +60,31 @@ jobs:
       - name: Get Detailed Coverage Report
         id: coverage_report
         run: |
-          # Check if coverage.xml exists and parse it
+          # Check if coverage.xml exists and parse it using Python for better handling
           if [ -f coverage.xml ]; then
             echo "Parsing coverage.xml..."
-            coverage_report="## Test Coverage Report\n"
-            while IFS= read -r line; do
-              if [[ "$line" == *'<file'* ]]; then
-                filename=$(echo "$line" | sed -n 's/.*name="\([^"]*\)".*/\1/p')
-              elif [[ "$line" == *'<lines-valid'* ]]; then
-                total_lines=$(echo "$line" | sed -n 's/.*lines-valid="\([0-9]*\)".*/\1/p')
-              elif [[ "$line" == *'<lines-covered'* ]]; then
-                lines_covered=$(echo "$line" | sed -n 's/.*lines-covered="\([0-9]*\)".*/\1/p')
-                if [ -n "$total_lines" ] && [ -n "$lines_covered" ]; then
-                  line_percentage=$(echo "scale=2; $lines_covered / $total_lines * 100" | bc)
-                  coverage_report+="| $filename | $line_percentage% coverage |\n"
-                fi
-              fi
-            done < coverage.xml
-            echo "Coverage Report:\n$coverage_report"
-            echo "$coverage_report" > coverage_report.txt
+            python3 - <<EOF
+            import xml.etree.ElementTree as ET
+            # Parse the coverage.xml
+            tree = ET.parse('coverage.xml')
+            root = tree.getroot()
+            # Initialize the coverage report
+            coverage_report = "## Test Coverage Report\n"
+            for file in root.findall('file'):
+                filename = file.get('name')
+                lines_valid = file.get('lines-valid')
+                lines_covered = file.get('lines-covered')
+                if lines_valid and lines_covered:
+                    line_percentage = (float(lines_covered) / float(lines_valid)) * 100
+                    coverage_report += f"| {filename} | {line_percentage:.2f}% coverage |\n"
+            with open('coverage_report.txt', 'w') as f:
+                f.write(coverage_report)
+            EOF
+            cat coverage_report.txt
           else
             echo "No coverage data found."
             echo "coverage_report=No coverage data available." >> $GITHUB_ENV
           fi
-
-          # Debugging: Print out the contents of the coverage_report.txt file
-          cat coverage_report.txt
-
-          # Set the output to the coverage report to make it available for later steps
           echo "coverage_report=$(<coverage_report.txt)" >> $GITHUB_ENV
 
       - name: Prepare notification

@@ -60,29 +60,58 @@ jobs:
       - name: Get Detailed Coverage Report
         id: coverage_report
         run: |
-          coverage_details=$(python -c 'import xml.etree.ElementTree as ET
-          tree = ET.parse("coverage.xml")
-          root = tree.getroot()
-          coverage_report = "## Test Coverage Report\n"
-          for file in root.iter("file"):
-              filename = file.get("name")
-              line_rate = file.get("lines-covered")
-              total_lines = file.get("lines-valid")
-              if total_lines:
-                  line_percentage = float(line_rate) / float(total_lines) * 100
-                  coverage_report += f"{filename}: {line_percentage:.2f}%\n"
-          print(coverage_report)
-          ')
-          echo "::set-output name=coverage_report::$coverage_details"
+          # Parse coverage XML and generate a detailed report
+          if [ -f coverage.xml ]; then
+            coverage_report="## Test Coverage Report\n"
+            while IFS= read -r line; do
+              if [[ "$line" == *'<file'* ]]; then
+                filename=$(echo "$line" | sed -n 's/.*name="\([^"]*\)".*/\1/p')
+              elif [[ "$line" == *'<lines-valid'* ]]; then
+                total_lines=$(echo "$line" | sed -n 's/.*lines-valid="\([0-9]*\)".*/\1/p')
+              elif [[ "$line" == *'<lines-covered'* ]]; then
+                lines_covered=$(echo "$line" | sed -n 's/.*lines-covered="\([0-9]*\)".*/\1/p')
+                if [ -n "$total_lines" ] && [ -n "$lines_covered" ]; then
+                  line_percentage=$(echo "scale=2; $lines_covered / $total_lines * 100" | bc)
+                  coverage_report+="| $filename | $line_percentage% coverage |\n"
+                fi
+              fi
+            done < coverage.xml
+            echo "$coverage_report" > coverage_report.txt
+          else
+            echo "No coverage data found."
+            echo "coverage_report=No coverage data available." >> $GITHUB_ENV
+          fi
+          echo "coverage_report=$(<coverage_report.txt)" >> $GITHUB_ENV
 
-      - name: Post Detailed Coverage as PR Comment
-        uses: peter-evans/create-or-update-comment@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          issue-number: ${{ github.event.pull_request.number }}
-          body: ${{ steps.coverage_report.outputs.coverage_report }}
-
-      - name: Debug Coverage Output
+      - name: Prepare notification
         run: |
-          cat coverage.xml
-          echo "$coverage_details"
+          # Prepare the coverage report for PR comment
+          if [ -f coverage_report.txt ]; then
+            coverage_report=$(cat coverage_report.txt)
+          else
+            coverage_report="No coverage data available."
+          fi
+          echo "coverage_report=$coverage_report" >> $GITHUB_ENV
+
+      - name: Create GitHub comment with coverage report
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const title = "Test Coverage Report";
+
+            // Read coverage report
+            const coverageReport = process.env.coverage_report;
+
+            // Format the report as markdown table
+            const body = `
+              ### Test Coverage Report:
+              ${coverageReport}
+            `;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: body
+            });

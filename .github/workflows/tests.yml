@@ -103,7 +103,7 @@ jobs:
 
           # Output the full formatted coverage string to be used in the comment step
           echo "formatted_coverage<<EOF" >> $GITHUB_ENV
-          echo "$formatted_coverage" >> $GITHUB_ENV
+          echo -e "$formatted_coverage" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
       - name: Comment on PR with Coverage Report

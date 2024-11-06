@@ -2,7 +2,7 @@ name: Run Tests with Coverage and PR Comment
 
 on:
   push:
-    branches: 
+    branches:
       - main
       - develop
   pull_request:
@@ -60,10 +60,10 @@ jobs:
       - name: Get Detailed Coverage Report
         id: coverage_report
         run: |
-          coverage_details=$(python -c 'import xml.etree.ElementTree as ET
+          coverage_report="## Test Coverage Report\n"
+          python -c 'import xml.etree.ElementTree as ET
           tree = ET.parse("coverage.xml")
           root = tree.getroot()
-          coverage_report = "## Test Coverage Report\n"
           for file in root.iter("file"):
               filename = file.get("name")
               line_rate = file.get("lines-covered")
@@ -72,12 +72,11 @@ jobs:
                   line_percentage = float(line_rate) / float(total_lines) * 100
                   coverage_report += f"{filename}: {line_percentage:.2f}%\n"
           print(coverage_report)
-          ')
-          echo "::set-output name=coverage_report::$coverage_details"
+          echo "$coverage_report" >> $GITHUB_ENV
 
       - name: Post Detailed Coverage as PR Comment
         uses: peter-evans/create-or-update-comment@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           issue-number: ${{ github.event.pull_request.number }}
-          body: ${{ steps.coverage_report.outputs.coverage_report }}
+          body: ${{ env.coverage_report }}

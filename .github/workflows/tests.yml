@@ -60,8 +60,9 @@ jobs:
       - name: Get Detailed Coverage Report
         id: coverage_report
         run: |
-          # Parse coverage XML and generate a detailed report
+          # Check if coverage.xml exists and parse it
           if [ -f coverage.xml ]; then
+            echo "Parsing coverage.xml..."
             coverage_report="## Test Coverage Report\n"
             while IFS= read -r line; do
               if [[ "$line" == *'<file'* ]]; then
@@ -76,15 +77,24 @@ jobs:
                 fi
               fi
             done < coverage.xml
+            echo "Coverage Report:\n$coverage_report"
             echo "$coverage_report" > coverage_report.txt
           else
             echo "No coverage data found."
             echo "coverage_report=No coverage data available." >> $GITHUB_ENV
           fi
+
+          # Debugging: Print out the contents of the coverage_report.txt file
+          cat coverage_report.txt
+
+          # Set the output to the coverage report to make it available for later steps
           echo "coverage_report=$(<coverage_report.txt)" >> $GITHUB_ENV
 
       - name: Prepare notification
         run: |
+          # Debugging: Check what we have in the environment variable
+          echo "Coverage Report from ENV:\n$coverage_report"
+
           # Prepare the coverage report for PR comment
           if [ -f coverage_report.txt ]; then
             coverage_report=$(cat coverage_report.txt)
@@ -102,6 +112,9 @@ jobs:
 
             // Read coverage report
             const coverageReport = process.env.coverage_report;
+
+            // Debugging: Check the contents of the report
+            console.log("Coverage Report:\n", coverageReport);
 
             // Format the report as markdown table
             const body = `

@@ -72,7 +72,7 @@ jobs:
                   class_name = class_elem.get("name")
                   line_rate = class_elem.get("line-rate")
                   # Output the class and its line-rate
-                  print(f"  Class: {class_name} -> line-rate: {line_rate}")')
+                  print(f"  Class: {class_name} Coverage: {line_rate}")')
           echo "coverage=$coverage" >> $GITHUB_ENV
 
       - name: Parse Coverage and Comment on PR

@@ -78,25 +78,22 @@ jobs:
       - name: Parse Coverage and Format for Comment
         id: parse-coverage
         run: |
-          # Split the coverage string into an array based on commas
           IFS=',' read -r -a coverage_array <<< "${{ env.coverage }}"
-          # Initialize the formatted coverage string
-          formatted_coverage=""
-          # Loop through each file-coverage pair
+          formatted_coverage_file="formatted_coverage.txt"
+          > $formatted_coverage_file  # Clear the file if it exists
           for coverage_pair in "${coverage_array[@]}"; do
             # Ensure we're not processing empty or malformed items
             if [[ -n "$coverage_pair" && "$coverage_pair" =~ ^[a-zA-Z0-9_.-]+_[0-9.]+$ ]]; then
               # Split the coverage_pair into file name and coverage value
               IFS='_' read -r file coverage <<< "$coverage_pair"
-              
-              # Ensure the file and coverage value are non-empty and valid
-              if [[ -n "$file" && -n "$coverage" ]]; then
-                # Format the line as 'file: coverage%'
-                formatted_coverage+="$file: $coverage%\n"
+              if [[ -n "$file" && -n "$coverage" && "$coverage" =~ ^[0-9.]+$ ]]; then
+                # Multiply by 100 to convert to percentage
+                percentage_coverage=$(echo "scale=2; $coverage * 100" | bc)
+                echo "$file: $percentage_coverage%" >> $formatted_coverage_file
               fi
             fi
           done
-          # Set the output variable for the formatted coverage
+          formatted_coverage=$(<"$formatted_coverage_file")
           echo "::set-output name=formatted-coverage::${formatted_coverage}"
 
       - name: Comment on PR with Coverage Report

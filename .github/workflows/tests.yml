@@ -81,6 +81,7 @@ jobs:
           # Join the coverage data with a comma to create a single string
           print(",".join(coverage))
           ')
+          echo "coverage=$coverage" >> $GITHUB_ENV
 
       - name: Parse Coverage and Comment on PR
         uses: peter-evans/create-or-update-comment@v2

@@ -60,25 +60,29 @@ jobs:
       - name: Get Detailed Coverage Report
         id: coverage_report
         run: |
-          coverage_details=$(python -c '
-          import xml.etree.ElementTree as ET
+          coverage_details=$(python -c 'import xml.etree.ElementTree as ET
           tree = ET.parse("coverage.xml")
           root = tree.getroot()
           coverage_report = "## Test Coverage Report\n"
-          for package in root.iter("package"):
-              for cls in package.iter("class"):
-                  filename = cls.get("filename")
-                  line_rate = cls.get("line-rate")
-                  if line_rate:
-                      coverage_report += f"{filename}: {float(line_rate) * 100:.2f}%\n"
+          for file in root.iter("file"):
+              filename = file.get("name")
+              line_rate = file.get("lines-covered")
+              total_lines = file.get("lines-valid")
+              if total_lines:
+                  line_percentage = float(line_rate) / float(total_lines) * 100
+                  coverage_report += f"{filename}: {line_percentage:.2f}%\n"
           print(coverage_report)
           ')
-          echo "$coverage_details" >> $GITHUB_ENV
-          echo "coverage_report=$coverage_details" >> $GITHUB_OUTPUT
+          echo "::set-output name=coverage_report::$coverage_details"
 
-        - name: Post Detailed Coverage as PR Comment
-          uses: peter-evans/create-or-update-comment@v2
-          with:
-            token: ${{ secrets.GITHUB_TOKEN }}
-            issue-number: ${{ github.event.pull_request.number }}
-            body: ${{ steps.coverage_report.outputs.coverage_report }}
+      - name: Post Detailed Coverage as PR Comment
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: ${{ steps.coverage_report.outputs.coverage_report }}
+
+      - name: Debug Coverage Output
+        run: |
+          cat coverage.xml
+          echo "$coverage_details"

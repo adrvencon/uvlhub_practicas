@@ -60,8 +60,6 @@ jobs:
       - name: Get Coverage Percentage
         id: coverage
         run: |
-          package_names=()
-          coverage_values=()
           coverage=$(python -c 'import xml.etree.ElementTree as ET
           tree = ET.parse("coverage.xml")
           root = tree.getroot()

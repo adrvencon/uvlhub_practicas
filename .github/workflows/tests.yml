@@ -80,8 +80,10 @@ jobs:
         run: |
           # Split the coverage string into an array based on commas
           IFS=',' read -r -a coverage_array <<< "${{ env.coverage }}"
+
           # Initialize an empty string to hold the formatted coverage output
           formatted_coverage=""
+
           # Loop through each file-coverage pair
           for coverage_pair in "${coverage_array[@]}"; do
             # Ensure we're not processing empty or malformed items
@@ -93,14 +95,16 @@ jobs:
               if [[ -n "$file" && -n "$coverage" && "$coverage" =~ ^[0-9.]+$ ]]; then
                 percentage_coverage=$(echo "scale=2; $coverage * 100" | bc)
                 
-                # Append the formatted coverage for this file to the result string with a newline
-                formatted_coverage+="$file: $percentage_coverage%$'\n'"
+                # Append the formatted coverage for this file to the result string
+                formatted_coverage+="**$file**: $percentage_coverage%\n"
               fi
             fi
           done
 
           # Output the full formatted coverage string to be used in the comment step
-          echo "::set-output name=formatted-coverage::${formatted_coverage}"
+          echo "formatted_coverage<<EOF" >> $GITHUB_ENV
+          echo "$formatted_coverage" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
       - name: Comment on PR with Coverage Report
         uses: peter-evans/create-or-update-comment@v2
@@ -109,4 +113,4 @@ jobs:
           issue-number: ${{ github.event.pull_request.number }}
           body: |
             ## Test Coverage Report
-            ${{ steps.parse-coverage.outputs.formatted-coverage }}
+            ${{ env.formatted_coverage }}

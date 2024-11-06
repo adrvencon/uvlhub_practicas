@@ -60,32 +60,17 @@ jobs:
       - name: Get Detailed Coverage Report
         id: coverage_report
         run: |
-          # Check if coverage.xml exists and parse it using Python for better handling
+          # Check if coverage.xml exists and print it directly
           if [ -f coverage.xml ]; then
-            echo "Parsing coverage.xml..."
-            python3 - <<'EOF'
-          import xml.etree.ElementTree as ET
-          # Parse the coverage.xml
-          tree = ET.parse('coverage.xml')
-          root = tree.getroot()
-          # Initialize the coverage report
-          coverage_report = "## Test Coverage Report\n"
-          for file in root.findall('file'):
-              filename = file.get('name')
-              lines_valid = file.get('lines-valid')
-              lines_covered = file.get('lines-covered')
-              if lines_valid and lines_covered:
-                  line_percentage = (float(lines_covered) / float(lines_valid)) * 100
-                  coverage_report += f"| {filename} | {line_percentage:.2f}% coverage |\n"
-          with open('coverage_report.txt', 'w') as f:
-              f.write(coverage_report)
-          EOF
-            cat coverage_report.txt
+            echo "Printing raw coverage.xml..."
+            cat coverage.xml
           else
             echo "No coverage data found."
             echo "coverage_report=No coverage data available." >> $GITHUB_ENV
           fi
-          echo "coverage_report=$(<coverage_report.txt)" >> $GITHUB_ENV
+
+          # Set the coverage_report variable in the environment for GitHub Actions
+          echo "coverage_report=$(<coverage.xml)" >> $GITHUB_ENV
 
       - name: Prepare notification
         run: |

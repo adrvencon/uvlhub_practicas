@@ -81,3 +81,8 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           issue-number: ${{ github.event.pull_request.number }}
           body: ${{ steps.coverage_report.outputs.coverage_report }}
+
+      - name: Debug Coverage Output
+        run: |
+          cat coverage.xml
+          echo "$coverage_details"

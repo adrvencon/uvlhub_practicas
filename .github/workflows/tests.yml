@@ -75,32 +75,29 @@ jobs:
           ')
           echo "coverage=$coverage" >> $GITHUB_ENV
 
-        - name: Parse Coverage and Format for Comment
-          id: parse-coverage
-          run: |
-            # Split the coverage string into an array based on commas
-            IFS=',' read -r -a coverage_array <<< "${{ env.coverage }}"
-
-            # Initialize the formatted coverage string
-            formatted_coverage=""
-
-            # Loop through each file-coverage pair
-            for coverage_pair in "${coverage_array[@]}"; do
-              # Ensure we're not processing empty or malformed items
-              if [[ -n "$coverage_pair" && "$coverage_pair" =~ ^[a-zA-Z0-9_.-]+_[0-9.]+$ ]]; then
-                # Split the coverage_pair into file name and coverage value
-                IFS='_' read -r file coverage <<< "$coverage_pair"
-                
-                # Ensure the file and coverage value are non-empty and valid
-                if [[ -n "$file" && -n "$coverage" ]]; then
-                  # Format the line as 'file: coverage%'
-                  formatted_coverage+="$file: $coverage%\n"
-                fi
+      - name: Parse Coverage and Format for Comment
+        id: parse-coverage
+        run: |
+          # Split the coverage string into an array based on commas
+          IFS=',' read -r -a coverage_array <<< "${{ env.coverage }}"
+          # Initialize the formatted coverage string
+          formatted_coverage=""
+          # Loop through each file-coverage pair
+          for coverage_pair in "${coverage_array[@]}"; do
+            # Ensure we're not processing empty or malformed items
+            if [[ -n "$coverage_pair" && "$coverage_pair" =~ ^[a-zA-Z0-9_.-]+_[0-9.]+$ ]]; then
+              # Split the coverage_pair into file name and coverage value
+              IFS='_' read -r file coverage <<< "$coverage_pair"
+              
+              # Ensure the file and coverage value are non-empty and valid
+              if [[ -n "$file" && -n "$coverage" ]]; then
+                # Format the line as 'file: coverage%'
+                formatted_coverage+="$file: $coverage%\n"
               fi
-            done
-
-            # Set the output variable for the formatted coverage
-            echo "::set-output name=formatted-coverage::${formatted_coverage}"
+            fi
+          done
+          # Set the output variable for the formatted coverage
+          echo "::set-output name=formatted-coverage::${formatted_coverage}"
 
       - name: Comment on PR with Coverage Report
         uses: peter-evans/create-or-update-comment@v2

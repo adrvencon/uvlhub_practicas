@@ -75,14 +75,23 @@ jobs:
           ')
           echo "coverage=$coverage" >> $GITHUB_ENV
 
-      - name: Parse Coverage and Comment on PR
+      - name: Parse Coverage and Format for Comment
+        id: parse-coverage
         run: |
           IFS=',' read -r -a coverage_array <<< "${{ env.coverage }}"
-          body="## Test Coverage Report\n\n"
+          formatted_coverage=""
           for coverage_pair in "${coverage_array[@]}"; do
             IFS='_' read -r file coverage <<< "$coverage_pair"
-            body+="$file: $coverage%\n"
+            formatted_coverage+="$file: $coverage%\n"
           done
-          echo "$body" | gh pr comment ${{ github.event.pull_request.number }} --body "$(cat)"
-        env:
-          coverage: ${{ env.coverage }}
+          echo "::set-output name=formatted-coverage::${formatted_coverage}"
+
+      - name: Comment on PR with Coverage Report
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ## Test Coverage Report
+            Line Coverage:
+            ${{ steps.parse-coverage.outputs.formatted-coverage }}

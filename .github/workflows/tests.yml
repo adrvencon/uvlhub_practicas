@@ -94,7 +94,7 @@ jobs:
                 percentage_coverage=$(echo "scale=2; $coverage * 100" | bc)
                 
                 # Append the formatted coverage for this file to the result string with a newline
-                formatted_coverage+="$file: $percentage_coverage%\n"
+                formatted_coverage+="$file: $percentage_coverage%$'\n'"
               fi
             fi
           done
@@ -109,5 +109,4 @@ jobs:
           issue-number: ${{ github.event.pull_request.number }}
           body: |
             ## Test Coverage Report
-            Line Coverage:
             ${{ steps.parse-coverage.outputs.formatted-coverage }}

@@ -1,4 +1,4 @@
-name: Run Tests with Coverage and PR Comment
+name: Run Tests with Coverage
 
 on:
   push:
@@ -55,65 +55,24 @@ jobs:
           MARIADB_USER: uvlhub_user
           MARIADB_PASSWORD: uvlhub_password
         run: |
-          pytest app/modules/ --cov=app/modules/auth --cov=app/modules/featuremodel --cov=app/modules/flamapy --cov=app/modules/hubfile --cov=app/modules/notepad --cov=app/modules/profile --cov=app/modules/webhook --cov-report=xml:coverage.xml --cov-report=term --ignore-glob='*selenium*'
+          pytest app/modules/ --cov=app/modules/ --cov-report=xml:coverage.xml --ignore-glob='*selenium*'
 
-      - name: Get Detailed Coverage Report
-        id: coverage_report
+      - name: Get Coverage Percentage
+        id: coverage
         run: |
-          # Check if coverage.xml exists and print it directly
-          if [ -f coverage.xml ]; then
-            echo "Reading raw coverage.xml..."
-            
-            # Escape special characters to safely store in the environment variable
-            sanitized_report=$(cat coverage.xml | sed 's/[&]/\\&/g; s/[;]/\\;/g; s/[ \t\n\r]/\\n/g')
-            
-            # Set the sanitized coverage report variable in the environment for GitHub Actions
-            echo "coverage_report=$sanitized_report" >> $GITHUB_ENV
-          else
-            echo "No coverage data found."
-            echo "coverage_report=No coverage data available." >> $GITHUB_ENV
-          fi
+          coverage=$(python -c 'import xml.etree.ElementTree as ET
+          tree = ET.parse("coverage.xml")
+          root = tree.getroot()
+          for elem in root.iter("coverage"):
+              line_rate = elem.get("line-rate")
+              print(f"{float(line_rate) * 100:.2f}")')
+          echo "coverage=$coverage" >> $GITHUB_ENV
 
-      - name: Prepare notification
-        run: |
-          # Debugging: Check what we have in the environment variable
-          echo "Coverage Report from ENV:\n$coverage_report"
-
-          # Prepare the coverage report for PR comment
-          if [ -z "$coverage_report" ]; then
-            coverage_report="No coverage data available."
-          fi
-
-          echo "coverage_report=$coverage_report" >> $GITHUB_ENV
-
-      - name: Create GitHub comment with coverage report
-        uses: actions/github-script@v6
+      - name: Parse Coverage and Comment on PR
+        uses: peter-evans/create-or-update-comment@v2
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const title = "Test Coverage Report";
-
-            // Read coverage report
-            const coverageReport = process.env.coverage_report;
-
-            // Debugging: Check the contents of the report
-            console.log("Coverage Report:\n", coverageReport);
-
-            // Decode the escaped newlines and characters back to readable format
-            const decodedReport = coverageReport.replace(/\\n/g, '\n').replace(/\\&/g, '&').replace(/\\;/g, ';');
-            
-            // Format the report as markdown table
-            const body = `
-              ### Test Coverage Report:
-              \`\`\`
-              ${decodedReport}
-              \`\`\`
-            `;
-            
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
-              body: body
-            });
-
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ## Test Coverage Report
+            Line Coverage: ${{ env.coverage }}%

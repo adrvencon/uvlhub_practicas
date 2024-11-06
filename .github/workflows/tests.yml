@@ -60,8 +60,6 @@ jobs:
       - name: Get Coverage Percentage
         id: coverage
         run: |
-          echo "Debugging the contents of coverage.xml:"
-          cat coverage.xml
           coverage=$(python -c 'import xml.etree.ElementTree as ET
           tree = ET.parse("coverage.xml")
           root = tree.getroot()
@@ -73,7 +71,8 @@ jobs:
               for class_elem in package.findall('.//class'):
                   class_name = class_elem.get('name')
                   line_rate = class_elem.get('line-rate')
-                  print(f"  Class: {class_name} -> line-rate: {line_rate}")
+                  # Output the class and its line-rate
+                  print(f"  Class: {class_name} -> line-rate: {line_rate}")')
           echo "coverage=$coverage" >> $GITHUB_ENV
 
       - name: Parse Coverage and Comment on PR

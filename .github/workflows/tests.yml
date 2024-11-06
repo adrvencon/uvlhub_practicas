@@ -62,6 +62,7 @@ jobs:
         run: |
           coverage=$(python -c 'import xml.etree.ElementTree as ET
           tree = ET.parse("coverage.xml")
+          cat coverage.xml
           root = tree.getroot()
           for elem in root.iter("coverage"):
               line_rate = elem.get("line-rate")

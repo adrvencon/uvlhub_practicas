@@ -62,15 +62,17 @@ jobs:
         run: |
           # Check if coverage.xml exists and print it directly
           if [ -f coverage.xml ]; then
-            echo "Printing raw coverage.xml..."
-            cat coverage.xml
+            echo "Reading raw coverage.xml..."
+            
+            # Escape special characters to safely store in the environment variable
+            sanitized_report=$(cat coverage.xml | sed 's/[&]/\\&/g; s/[;]/\\;/g; s/[ \t\n\r]/\\n/g')
+            
+            # Set the sanitized coverage report variable in the environment for GitHub Actions
+            echo "coverage_report=$sanitized_report" >> $GITHUB_ENV
           else
             echo "No coverage data found."
             echo "coverage_report=No coverage data available." >> $GITHUB_ENV
           fi
-
-          # Set the coverage_report variable in the environment for GitHub Actions
-          echo "coverage_report=$(<coverage.xml)" >> $GITHUB_ENV
 
       - name: Prepare notification
         run: |
@@ -78,11 +80,10 @@ jobs:
           echo "Coverage Report from ENV:\n$coverage_report"
 
           # Prepare the coverage report for PR comment
-          if [ -f coverage_report.txt ]; then
-            coverage_report=$(cat coverage_report.txt)
-          else
+          if [ -z "$coverage_report" ]; then
             coverage_report="No coverage data available."
           fi
+
           echo "coverage_report=$coverage_report" >> $GITHUB_ENV
 
       - name: Create GitHub comment with coverage report
@@ -98,10 +99,15 @@ jobs:
             // Debugging: Check the contents of the report
             console.log("Coverage Report:\n", coverageReport);
 
+            // Decode the escaped newlines and characters back to readable format
+            const decodedReport = coverageReport.replace(/\\n/g, '\n').replace(/\\&/g, '&').replace(/\\;/g, ';');
+            
             // Format the report as markdown table
             const body = `
               ### Test Coverage Report:
-              ${coverageReport}
+              \`\`\`
+              ${decodedReport}
+              \`\`\`
             `;
             
             await github.rest.issues.createComment({
@@ -110,3 +116,4 @@ jobs:
               issue_number: context.payload.pull_request.number,
               body: body
             });
+

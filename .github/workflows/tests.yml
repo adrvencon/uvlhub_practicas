@@ -74,24 +74,19 @@ jobs:
                       coverage.append(f"{class_name}_{line_rate}")
           print(",".join(coverage))
           ')
+          cat coverage
           echo "coverage=$coverage" >> $GITHUB_ENV
 
       - name: Parse Coverage and Format for Comment
         id: parse-coverage
         run: |
-          # Split the coverage string into an array based on commas
           IFS=',' read -r -a coverage_array <<< "${{ env.coverage }}"
 
-          # Initialize an empty string to hold the formatted coverage output
           formatted_coverage=""
-
-          # Loop through each file-coverage pair
           for coverage_pair in "${coverage_array[@]}"; do
-            # Ensure we're not processing empty or malformed items
             if [[ -n "$coverage_pair" && "$coverage_pair" =~ ^[a-zA-Z0-9_.-]+_[0-9.]+$ ]]; then
               # Split the coverage_pair into file name and coverage value
               IFS='_' read -r file coverage <<< "$coverage_pair"
-              
               # Convert the coverage to a percentage (multiply by 100)
               if [[ -n "$file" && -n "$coverage" && "$coverage" =~ ^[0-9.]+$ ]]; then
                 percentage_coverage=$(echo "scale=2; $coverage * 100" | bc)
@@ -101,8 +96,6 @@ jobs:
               fi
             fi
           done
-
-          # Output the full formatted coverage string to be used in the comment step
           echo "formatted_coverage<<EOF" >> $GITHUB_ENV
           echo -e "$formatted_coverage" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV

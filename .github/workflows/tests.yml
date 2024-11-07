@@ -65,13 +65,14 @@ jobs:
           tree = ET.parse("coverage.xml")
           root = tree.getroot()
           coverage = []
+          exclude_files = {"locustfile.py", "seeders.py"}
           for package in root.findall(".//package"):
               package_name = package.get("name")
               coverage.append(f"**{package_name}**")
               for class_elem in package.findall(".//class"):
                   class_name = class_elem.get("name")
                   line_rate = class_elem.get("line-rate")
-                  if line_rate:
+                  if class_name not in exclude_files and line_rate:
                       coverage.append(f"{class_name}_{line_rate}")
           print(",".join(coverage))
           ')
